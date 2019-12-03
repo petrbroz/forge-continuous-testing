@@ -1,0 +1,23 @@
+{
+  "name": "forge-continuous-testing",
+  "version": "0.0.0",
+  "description": "Collection of tests for continuous testing of Autodesk Forge services.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "autodesk",
+    "forge",
+    "continuous",
+    "testing"
+  ],
+  "author": "Petr Broz <petr.broz@autodesk.com>",
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^4.1.1",
+    "forge-convert-utils": "^1.1.2",
+    "forge-server-utils": "^8.0.8",
+    "fs-extra": "^8.1.0"
+  }
+}
