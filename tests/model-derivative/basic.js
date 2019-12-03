@@ -68,12 +68,12 @@ async function run(bucketKey, objectKey, updateBaseline) {
         debug('Downloading baseline');
         await downloadBaseline(testName, baselineDir);
         debug('Extracting derivatives');
-        //await extract(bucketKey, objectKey, currentDir);
+        await extract(bucketKey, objectKey, currentDir);
         debug('Comparing derivatives against baseline');
         await compare(baselineDir, currentDir);
         if (updateBaseline) {
             debug('Updating baseline');
-            //await uploadBaseline(testName, currentDir);
+            await uploadBaseline(testName, currentDir);
         }
         debug('Done!');
     } catch (err) {

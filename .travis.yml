@@ -6,14 +6,13 @@ env:
   global:
     - PATH=$HOME/.local/bin:$PATH
     - FORGE_BUCKET_KEY=forge-regression-testing
+  jobs:
+    - FORGE_OBJECT_KEY=rac_basic_sample_project.rvt
+    - FORGE_OBJECT_KEY=rst_basic_sample_project.rvt
+    - FORGE_OBJECT_KEY=rme_basic_sample_project.rvt
 
-before_install:
+install:
   - pip install --user awscli
-
-jobs:
-  include:
-    - env: FORGE_OBJECT_KEY=rac_basic_sample_project.rvt
-    - env: FORGE_OBJECT_KEY=rst_basic_sample_project.rvt
-    - env: FORGE_OBJECT_KEY=rme_basic_sample_project.rvt
+  - yarn install
 
 script: node tests/model-derivative/basic.js $FORGE_BUCKET_KEY $FORGE_OBJECT_KEY
