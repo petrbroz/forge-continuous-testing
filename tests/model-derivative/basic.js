@@ -63,17 +63,18 @@ async function compare(baselineDir, currentDir) {
 async function run(bucketKey, objectKey, updateBaseline) {
     try {
         const testName = 'model-derivative/basic/' + bucketKey + '/' + objectKey;
-        const baselineDir = path.join(process.cwd(), testName, 'baseline');
         const currentDir = path.join(process.cwd(), testName, 'current');
-        debug('Downloading baseline');
-        await downloadBaseline(testName, baselineDir);
         debug('Extracting derivatives');
         await extract(bucketKey, objectKey, currentDir);
-        debug('Comparing derivatives against baseline');
-        await compare(baselineDir, currentDir);
         if (updateBaseline) {
             debug('Updating baseline');
             await uploadBaseline(testName, currentDir);
+        } else {
+            const baselineDir = path.join(process.cwd(), testName, 'baseline');
+            debug('Downloading baseline');
+            await downloadBaseline(testName, baselineDir);
+            debug('Comparing derivatives against baseline');
+            await compare(baselineDir, currentDir);
         }
         debug('Done!');
     } catch (err) {
@@ -82,4 +83,5 @@ async function run(bucketKey, objectKey, updateBaseline) {
     }
 }
 
-run(process.argv[2], process.argv[3], false);
+const updateBaseline = process.argv.indexOf('--update') !== -1;
+run(process.argv[2], process.argv[3], updateBaseline);
