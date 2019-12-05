@@ -9,9 +9,7 @@ env:
   - PATH=$HOME/.local/bin:$PATH
   - FORGE_BUCKET_KEY=forge-regression-testing
   jobs:
-  - FORGE_OBJECT_KEY=rac_basic_sample_project.rvt
-  - FORGE_OBJECT_KEY=rst_basic_sample_project.rvt
-  - FORGE_OBJECT_KEY=rme_basic_sample_project.rvt
+  - FORGE_OBJECT_KEY=jet_engine_model.zip
 
 install:
 - pip install --user awscli
