@@ -4,7 +4,7 @@ const debug = require('debug')('test:debug');
 const { DataManagementClient, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
 const { SvfReader } = require('forge-convert-utils');
 const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
-const { compareFolders } = require('../../helpers/compare');
+const { compareFolders, compareObjects } = require('../../helpers/compare');
 
 const config = require('../../config');
 
@@ -49,15 +49,16 @@ async function extract(bucketKey, objectKey, outputDir) {
     }
 }
 
-async function compare(baselineDir, currentDir) {
-    const differences = compareFolders(baselineDir, currentDir);
-    if (differences.length > 0) {
-        debug(`Found ${differences.length} differences`);
-        for (const diff of differences) {
-            debug(diff);
-        }
-        throw new Error('Derivatives not equal');
-    }
+async function compare(baselineDir, currentDir, bucketKey, objectKey) {
+    debug('Comparing extracted folders and files');
+    compareFolders(baselineDir, currentDir);
+
+    debug('Comparing model derivative manifests');
+    const object = await dataManagementClient.getObjectDetails(bucketKey, objectKey);
+    const urn = urnify(object.objectId);
+    const baselineManifest = fse.readJsonSync(path.join(baselineDir, urn, 'manifest.json'));
+    const currentManifest = fse.readJsonSync(path.join(currentDir, urn, 'manifest.json'));
+    compareObjects(baselineManifest, currentManifest);
 }
 
 async function run(bucketKey, objectKey, updateBaseline) {
@@ -74,7 +75,7 @@ async function run(bucketKey, objectKey, updateBaseline) {
             debug('Downloading baseline');
             await downloadBaseline(testName, baselineDir);
             debug('Comparing derivatives against baseline');
-            await compare(baselineDir, currentDir);
+            await compare(baselineDir, currentDir, bucketKey, objectKey);
         }
         debug('Done!');
     } catch (err) {

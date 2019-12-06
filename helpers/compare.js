@@ -1,5 +1,6 @@
 const path = require('path');
 const fse = require('fs-extra');
+const { diffString } = require('json-diff');
 
 function compareFolders(baselineDir, currentDir) {
     let differences = [];
@@ -35,9 +36,19 @@ function compareFolders(baselineDir, currentDir) {
         }
     }
     _compare(baselineDir, currentDir);
-    return differences;
+    if (differences.length > 0) {
+        throw new Error('Compared folder structures not equal:\n' + differences.join('\n'));
+    }
+}
+
+function compareObjects(baseline, current) {
+    const result = diffString(baseline, current);
+    if (result) {
+        throw new Error('Compared objects not equal:\n' + result);
+    }
 }
 
 module.exports = {
-    compareFolders
+    compareFolders,
+    compareObjects
 };
