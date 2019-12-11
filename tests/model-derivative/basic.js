@@ -24,19 +24,21 @@ const modelDerivativeClient = new ModelDerivativeClient(ForgeCredentials);
 
 async function extract(bucketKey, objectKey, outputDir) {
     let results = {
-        pdbPath: null
+        urn: null,
+        manifest: null,
+        derivatives: []
     };
 
     fse.ensureDirSync(outputDir);
     // Getting object details
     debug(`Retrieving object details`);
     const object = await dataManagementClient.getObjectDetails(bucketKey, objectKey);
-    const urn = urnify(object.objectId);
+    const urn = results.urn = urnify(object.objectId);
     const urnDir = path.join(outputDir, urn);
     fse.ensureDirSync(urnDir);
     // Download derivative manifest
     debug(`Extracting manifest`);
-    const manifest = await modelDerivativeClient.getManifest(urn);
+    const manifest = results.manifest = await modelDerivativeClient.getManifest(urn);
     fse.writeJsonSync(path.join(urnDir, 'manifest.json'), manifest);
     // Download all SVFs
     const helper = new ManifestHelper(manifest);
@@ -49,6 +51,11 @@ async function extract(bucketKey, objectKey, outputDir) {
         fse.writeFileSync(path.join(viewableDir, 'output.svf'), svf);
         const reader = await SvfReader.FromDerivativeService(urn, derivative.guid, ForgeCredentials);
         const manifest = await reader.getManifest();
+        results.derivatives.push({
+            guid: derivative.guid,
+            basePath: path.join(urn, derivative.guid),
+            svf: manifest
+        });
         for (const asset of manifest.assets) {
             if (!asset.URI.startsWith('embed:')) {
                 debug(`Extracting asset ${asset.id}`);
@@ -56,10 +63,6 @@ async function extract(bucketKey, objectKey, outputDir) {
                 const assetPath = path.join(viewableDir, asset.URI);
                 fse.ensureDirSync(path.dirname(assetPath));
                 fse.writeFileSync(assetPath, assetData);
-                // Store relative path to all objects_*.json.gz files
-                if (asset.type === 'Autodesk.CloudPlatform.PropertyAttributes') {
-                    results.pdbPath = path.relative(outputDir, path.dirname(assetPath));
-                }
             } else {
                 debug(`Skipping embedded asset ${asset.id}`);
             }
@@ -80,11 +83,19 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
     const currentManifest = fse.readJsonSync(path.join(currentDir, urn, 'manifest.json'));
     compareObjects(baselineManifest, currentManifest);
 
-    if (extractResults.pdbPath !== null) {
-        debug('Comparing property database assets');
-        const baselinePropsDir = path.join(baselineDir, extractResults.pdbPath);
-        const currentPropsDir = path.join(currentDir, extractResults.pdbPath);
-        compareProperties(baselinePropsDir, currentPropsDir);
+    // Compare individual derivatives if there are any
+    if (extractResults.derivatives.length > 0) {
+        // All derivatives share a single property db, so only test it once
+        const firstDerivative = extractResults.derivatives[0];
+        const pdbAsset = firstDerivative.svf.assets.find(asset => asset.type === 'Autodesk.CloudPlatform.PropertyAttributes');
+        if (pdbAsset) {
+            debug('Comparing property database assets');
+            const baselinePropsDir = path.join(baselineDir, firstDerivative.basePath, path.dirname(pdbAsset.URI));
+            const currentPropsDir = path.join(currentDir, firstDerivative.basePath, path.dirname(pdbAsset.URI));
+            compareProperties(baselinePropsDir, currentPropsDir);
+        } else {
+            throw new Error('Property database not found.');
+        }
     }
 }
 
