@@ -14,7 +14,7 @@ const debug = require('debug')('test:debug');
 const { DataManagementClient, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
 const { SvfReader } = require('forge-convert-utils');
 const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
-const { compareFolders, compareObjects, compareProperties } = require('../../helpers/compare');
+const { compareFolders, compareObjects, compareProperties, compareSvf } = require('../../helpers/compare');
 
 const config = require('../../config');
 
@@ -83,7 +83,6 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
     const currentManifest = fse.readJsonSync(path.join(currentDir, urn, 'manifest.json'));
     compareObjects(baselineManifest, currentManifest);
 
-    // Compare individual derivatives if there are any
     if (extractResults.derivatives.length > 0) {
         // All derivatives share a single property db, so only test it once
         const firstDerivative = extractResults.derivatives[0];
@@ -95,6 +94,13 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
             compareProperties(baselinePropsDir, currentPropsDir);
         } else {
             throw new Error('Property database not found.');
+        }
+
+        // Compare individual derivatives
+        for (const derivative of extractResults.derivatives) {
+            const baselineSvfPath = path.join(baselineDir, derivative.basePath, 'output.svf');
+            const currentSvfPath = path.join(currentDir, derivative.basePath, 'output.svf');
+            await compareSvf(baselineSvfPath, currentSvfPath);
         }
     }
 }

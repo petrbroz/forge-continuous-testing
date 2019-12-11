@@ -1,6 +1,7 @@
 const path = require('path');
 const zlib = require('zlib');
 const fse = require('fs-extra');
+const { SvfReader } = require('forge-convert-utils');
 const { diffString } = require('json-diff');
 
 /**
@@ -90,8 +91,40 @@ function compareProperties(baselineDir, currentDir) {
     }
 }
 
+/**
+ * Compares structure of SVFs.
+ * @param {string} baselineSvfPath Local filepath to 1st compared SVF file.
+ * @param {string} currentSvfPath Local filepath to 2nd compared SVF file.
+ * @throws exception describing differences if there are any.
+ */
+async function compareSvf(baselineSvfPath, currentSvfPath) {
+    const baselineSvfReader = await SvfReader.FromFileSystem(baselineSvfPath);
+    const currentSvfReader = await SvfReader.FromFileSystem(currentSvfPath);
+
+    // Compare fragments
+    const baselineFragments = await baselineSvfReader.readFragments();
+    const currentFragments = await currentSvfReader.readFragments();
+    if (baselineFragments.length !== currentFragments.length) {
+        throw new Error('Different number of fragments in compared SVFs.');
+    }
+    for (let i = 0, len = baselineFragments.length; i < len; i++) {
+        const baselineFragment = baselineFragments[i];
+        const currentFragment = currentFragments[i];
+        if (baselineFragment.dbID !== currentFragment.dbID) {
+            throw new Error(`Compared fragments ${i} point to different dbIDs.`);
+        }
+        if (baselineFragment.geometryID !== currentFragment.geometryID) {
+            throw new Error(`Compared fragments ${i} point to different geometry IDs.`);
+        }
+        if (baselineFragment.materialID !== currentFragment.materialID) {
+            throw new Error(`Compared fragments ${i} point to different material IDs.`);
+        }
+    }
+}
+
 module.exports = {
     compareFolders,
     compareObjects,
-    compareProperties
+    compareProperties,
+    compareSvf
 };
