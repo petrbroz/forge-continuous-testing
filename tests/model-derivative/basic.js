@@ -14,7 +14,14 @@ const debug = require('debug')('test:debug');
 const { DataManagementClient, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
 const { SvfReader } = require('forge-convert-utils');
 const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
-const { compareFolders, compareObjects, compareProperties, compareFragments, compareMaterials } = require('../../helpers/compare');
+const {
+    compareFolders,
+    compareObjects,
+    compareProperties,
+    compareFragments,
+    compareMaterials,
+    compareGeometryMetadata
+} = require('../../helpers/compare');
 
 const config = require('../../config');
 
@@ -107,6 +114,8 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
             await compareFragments(baselineSvfReader, currentSvfReader);
             debug('Comparing SVF materials');
             await compareMaterials(baselineSvfReader, currentSvfReader);
+            debug('Comparing SVF geometry metadata');
+            await compareGeometryMetadata(baselineSvfReader, currentSvfReader);
         }
     }
 }

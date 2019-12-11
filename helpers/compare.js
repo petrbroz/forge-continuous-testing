@@ -137,10 +137,28 @@ async function compareMaterials(baselineSvfReader, currentSvfReader) {
     }
 }
 
+/**
+ * Compares SVF geometry metadata.
+ * @param {SvfReader} baselineSvfReader Reader of 1st compared SVF file.
+ * @param {SvfReader} currentSvfReader Reader of 2nd compared SVF file.
+ * @throws exception describing differences if there are any.
+ */
+async function compareGeometryMetadata(baselineSvfReader, currentSvfReader) {
+    const baselineGeometryMetadata = await baselineSvfReader.readGeometries();
+    const currentGeometryMetadata = await currentSvfReader.readGeometries();
+    if (baselineGeometryMetadata.length !== currentGeometryMetadata.length) {
+        throw new Error('Different number of geometry metadata in compared SVFs.');
+    }
+    for (let i = 0, len = baselineGeometryMetadata.length; i < len; i++) {
+        compareObjects(baselineGeometryMetadata[i], currentGeometryMetadata[i]);
+    }
+}
+
 module.exports = {
     compareFolders,
     compareObjects,
     compareProperties,
     compareFragments,
-    compareMaterials
+    compareMaterials,
+    compareGeometryMetadata
 };
