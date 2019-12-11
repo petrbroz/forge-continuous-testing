@@ -70,7 +70,7 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
     const currentManifest = fse.readJsonSync(path.join(currentDir, urn, 'manifest.json'));
     compareObjects(baselineManifest, currentManifest);
 
-    if (extractResults.pdbPath) {
+    if (extractResults.pdbPath !== null) {
         debug('Comparing property database assets');
         const baselinePropsDir = path.join(baselineDir, extractResults.pdbPath);
         const currentPropsDir = path.join(currentDir, extractResults.pdbPath);
