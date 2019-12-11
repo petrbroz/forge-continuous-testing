@@ -92,7 +92,7 @@ function compareProperties(baselineDir, currentDir) {
 }
 
 /**
- * Compares structure of SVFs.
+ * Compares SVF fragments.
  * @param {SvfReader} baselineSvfReader Reader of 1st compared SVF file.
  * @param {SvfReader} currentSvfReader Reader of 2nd compared SVF file.
  * @throws exception describing differences if there are any.
@@ -118,9 +118,29 @@ async function compareFragments(baselineSvfReader, currentSvfReader) {
     }
 }
 
+/**
+ * Compares SVF materials.
+ * @param {SvfReader} baselineSvfReader Reader of 1st compared SVF file.
+ * @param {SvfReader} currentSvfReader Reader of 2nd compared SVF file.
+ * @throws exception describing differences if there are any.
+ */
+async function compareMaterials(baselineSvfReader, currentSvfReader) {
+    const baselineMaterials = await baselineSvfReader.readMaterials();
+    const currentMaterials = await currentSvfReader.readMaterials();
+    if (baselineMaterials.length !== currentMaterials.length) {
+        throw new Error('Different number of materials in compared SVFs.');
+    }
+    for (let i = 0, len = baselineMaterials.length; i < len; i++) {
+        const baselineMaterial = baselineMaterials[i];
+        const currentMaterial = currentMaterials[i];
+        compareObjects(baselineMaterial, currentMaterial);
+    }
+}
+
 module.exports = {
     compareFolders,
     compareObjects,
     compareProperties,
-    compareFragments
+    compareFragments,
+    compareMaterials
 };
