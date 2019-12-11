@@ -93,15 +93,11 @@ function compareProperties(baselineDir, currentDir) {
 
 /**
  * Compares structure of SVFs.
- * @param {string} baselineSvfPath Local filepath to 1st compared SVF file.
- * @param {string} currentSvfPath Local filepath to 2nd compared SVF file.
+ * @param {SvfReader} baselineSvfReader Reader of 1st compared SVF file.
+ * @param {SvfReader} currentSvfReader Reader of 2nd compared SVF file.
  * @throws exception describing differences if there are any.
  */
-async function compareSvf(baselineSvfPath, currentSvfPath) {
-    const baselineSvfReader = await SvfReader.FromFileSystem(baselineSvfPath);
-    const currentSvfReader = await SvfReader.FromFileSystem(currentSvfPath);
-
-    // Compare fragments
+async function compareFragments(baselineSvfReader, currentSvfReader) {
     const baselineFragments = await baselineSvfReader.readFragments();
     const currentFragments = await currentSvfReader.readFragments();
     if (baselineFragments.length !== currentFragments.length) {
@@ -126,5 +122,5 @@ module.exports = {
     compareFolders,
     compareObjects,
     compareProperties,
-    compareSvf
+    compareFragments
 };

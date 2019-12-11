@@ -14,7 +14,7 @@ const debug = require('debug')('test:debug');
 const { DataManagementClient, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
 const { SvfReader } = require('forge-convert-utils');
 const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
-const { compareFolders, compareObjects, compareProperties, compareSvf } = require('../../helpers/compare');
+const { compareFolders, compareObjects, compareProperties, compareFragments } = require('../../helpers/compare');
 
 const config = require('../../config');
 
@@ -101,8 +101,10 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
             debug(`Comparing derivative ${derivative.guid}`);
             const baselineSvfPath = path.join(baselineDir, derivative.basePath, 'output.svf');
             const currentSvfPath = path.join(currentDir, derivative.basePath, 'output.svf');
-            debug('Comparing derivative SVFs');
-            await compareSvf(baselineSvfPath, currentSvfPath);
+            const baselineSvfReader = await SvfReader.FromFileSystem(baselineSvfPath);
+            const currentSvfReader = await SvfReader.FromFileSystem(currentSvfPath);
+            debug('Comparing SVF fragments');
+            await compareFragments(baselineSvfReader, currentSvfReader);
         }
     }
 }
