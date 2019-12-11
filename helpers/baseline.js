@@ -3,6 +3,13 @@ const { exec } = require('child_process');
 
 const config = require('../config');
 
+/**
+ * Downloads and extracts baseline data for specific test to local folder.
+ * @async
+ * @param {string} testName Name of the test that was used to store the baseline data in remote storage.
+ * @param {string} destDir Local folder path where the baseline should be extracted.
+ * @returns {Promise} promise that resolves after the baseline data has been downloaded and extracted.
+ */
 function downloadBaseline(testName, destDir) {
     fse.ensureDirSync(destDir);
     const cmd = `aws s3 cp s3://${config.aws.s3_bucket}/baselines/${testName}.tar.gz - | tar xzf -`;
@@ -23,6 +30,13 @@ function downloadBaseline(testName, destDir) {
     });
 }
 
+/**
+ * Packs and uploads new baseline data to remote storage.
+ * @async
+ * @param {string} testName Name of the test to be used in the remote storage.
+ * @param {string} srcDir Local folder path where the baseline should be taken from.
+ * @returns {Promise} promise that resolves after the baseline data has been uploaded.
+*/
 function uploadBaseline(testName, srcDir) {
     const cmd = `tar czf - . | aws s3 cp - s3://${config.aws.s3_bucket}/baselines/${testName}.tar.gz`;
     const env = {

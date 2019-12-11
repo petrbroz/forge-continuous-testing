@@ -3,6 +3,12 @@ const zlib = require('zlib');
 const fse = require('fs-extra');
 const { diffString } = require('json-diff');
 
+/**
+ * Recursively compares two local folders, their structure, and file sizes.
+ * @param {string} baselineDir Path to the 1st compared folder.
+ * @param {string} currentDir Path to the 2nd compared folder.
+ * @throws exception describing differences if there are any.
+ */
 function compareFolders(baselineDir, currentDir) {
     let differences = [];
     function _compare(aDir, bDir) {
@@ -42,13 +48,27 @@ function compareFolders(baselineDir, currentDir) {
     }
 }
 
-function compareObjects(baseline, current) {
-    const result = diffString(baseline, current);
+/**
+ * Recursively compares structure of JavaScript objects.
+ * Note: this comparison can be computationally expensive; if you don't need exact details
+ * on which properties are different, consider simply comparing the objects as stringified JSONs.
+ * @param {object} baselineObj 1st compared object.
+ * @param {object} currentObj 2nd compared object.
+ * @throws exception describing differences if there are any.
+ */
+function compareObjects(baselineObj, currentObj) {
+    const result = diffString(baselineObj, currentObj);
     if (result) {
         throw new Error('Compared objects not equal:\n' + result);
     }
 }
 
+/**
+ * Compares property databases stored in 'objects_*.json.gz' files.
+ * @param {string} baselineDir Path to 1st folder containing the 'objects_*.json.gz' files.
+ * @param {string} currentDir Path to 2nd folder containing the 'objects_*.json.gz' files.
+ * @throws exception describing differences if there are any.
+ */
 function compareProperties(baselineDir, currentDir) {
     function parse(filename) {
         const archive = fse.readFileSync(filename);
