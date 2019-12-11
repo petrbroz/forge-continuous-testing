@@ -1,4 +1,5 @@
 const path = require('path');
+const zlib = require('zlib');
 const fse = require('fs-extra');
 const { diffString } = require('json-diff');
 
@@ -48,7 +49,29 @@ function compareObjects(baseline, current) {
     }
 }
 
+function compareProperties(baselineDir, currentDir) {
+    function parse(filename) {
+        const archive = fse.readFileSync(filename);
+        const content = zlib.gunzipSync(archive).toString();
+        return JSON.parse(content);
+    }
+
+    const propertyDbAssets = [
+        'objects_attrs.json.gz',
+        'objects_avs.json.gz',
+        'objects_ids.json.gz',
+        'objects_offs.json.gz',
+        'objects_vals.json.gz'
+    ];
+    for (const propDbAsset of propertyDbAssets) {
+        const baselineAsset = parse(path.join(baselineDir, propDbAsset));
+        const currentAsset = parse(path.join(currentDir, propDbAsset));
+        compareObjects(baselineAsset, currentAsset);
+    }
+}
+
 module.exports = {
     compareFolders,
-    compareObjects
+    compareObjects,
+    compareProperties
 };

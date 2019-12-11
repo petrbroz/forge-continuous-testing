@@ -4,7 +4,7 @@ const debug = require('debug')('test:debug');
 const { DataManagementClient, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
 const { SvfReader } = require('forge-convert-utils');
 const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
-const { compareFolders, compareObjects } = require('../../helpers/compare');
+const { compareFolders, compareObjects, compareProperties } = require('../../helpers/compare');
 
 const config = require('../../config');
 
@@ -13,6 +13,10 @@ const dataManagementClient = new DataManagementClient(ForgeCredentials);
 const modelDerivativeClient = new ModelDerivativeClient(ForgeCredentials);
 
 async function extract(bucketKey, objectKey, outputDir) {
+    let results = {
+        pdbPath: null
+    };
+
     fse.ensureDirSync(outputDir);
     // Getting object details
     debug(`Retrieving object details`);
@@ -42,14 +46,20 @@ async function extract(bucketKey, objectKey, outputDir) {
                 const assetPath = path.join(viewableDir, asset.URI);
                 fse.ensureDirSync(path.dirname(assetPath));
                 fse.writeFileSync(assetPath, assetData);
+                // Store relative path to all objects_*.json.gz files
+                if (asset.type === 'Autodesk.CloudPlatform.PropertyAttributes') {
+                    results.pdbPath = path.relative(outputDir, path.dirname(assetPath));
+                }
             } else {
                 debug(`Skipping embedded asset ${asset.id}`);
             }
         }
     }
+
+    return results;
 }
 
-async function compare(baselineDir, currentDir, bucketKey, objectKey) {
+async function compare(baselineDir, currentDir, bucketKey, objectKey, extractResults) {
     debug('Comparing extracted folders and files');
     compareFolders(baselineDir, currentDir);
 
@@ -59,6 +69,13 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey) {
     const baselineManifest = fse.readJsonSync(path.join(baselineDir, urn, 'manifest.json'));
     const currentManifest = fse.readJsonSync(path.join(currentDir, urn, 'manifest.json'));
     compareObjects(baselineManifest, currentManifest);
+
+    if (extractResults.pdbPath) {
+        debug('Comparing property database assets');
+        const baselinePropsDir = path.join(baselineDir, extractResults.pdbPath);
+        const currentPropsDir = path.join(currentDir, extractResults.pdbPath);
+        compareProperties(baselinePropsDir, currentPropsDir);
+    }
 }
 
 async function run(bucketKey, objectKey, updateBaseline) {
@@ -66,7 +83,7 @@ async function run(bucketKey, objectKey, updateBaseline) {
         const testName = 'model-derivative/basic/' + bucketKey + '/' + objectKey;
         const currentDir = path.join(process.cwd(), testName, 'current');
         debug('Extracting derivatives');
-        await extract(bucketKey, objectKey, currentDir);
+        const extractResults = await extract(bucketKey, objectKey, currentDir);
         if (updateBaseline) {
             debug('Updating baseline');
             await uploadBaseline(testName, currentDir);
@@ -75,7 +92,7 @@ async function run(bucketKey, objectKey, updateBaseline) {
             debug('Downloading baseline');
             await downloadBaseline(testName, baselineDir);
             debug('Comparing derivatives against baseline');
-            await compare(baselineDir, currentDir, bucketKey, objectKey);
+            await compare(baselineDir, currentDir, bucketKey, objectKey, extractResults);
         }
         debug('Done!');
     } catch (err) {
