@@ -98,8 +98,10 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
 
         // Compare individual derivatives
         for (const derivative of extractResults.derivatives) {
+            debug(`Comparing derivative ${derivative.guid}`);
             const baselineSvfPath = path.join(baselineDir, derivative.basePath, 'output.svf');
             const currentSvfPath = path.join(currentDir, derivative.basePath, 'output.svf');
+            debug('Comparing derivative SVFs');
             await compareSvf(baselineSvfPath, currentSvfPath);
         }
     }
