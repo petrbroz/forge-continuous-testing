@@ -15,4 +15,7 @@ install:
   - pip install --user awscli
   - yarn install
 
+notifications:
+  slack: $SLACK_ACCOUNT:$SLACK_TOKEN
+
 script: node tests/model-derivative/basic.js $FORGE_BUCKET_KEY $FORGE_OBJECT_KEY
