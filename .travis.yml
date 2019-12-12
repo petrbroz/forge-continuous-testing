@@ -4,18 +4,19 @@ node_js:
 
 env:
   global:
-    - PATH=$HOME/.local/bin:$PATH
-    - FORGE_BUCKET_KEY=forge-regression-testing
+  - PATH=$HOME/.local/bin:$PATH
+  - FORGE_BUCKET_KEY=forge-regression-testing
   jobs:
-    - FORGE_OBJECT_KEY=rac_basic_sample_project.rvt
-    - FORGE_OBJECT_KEY=rst_basic_sample_project.rvt
-    - FORGE_OBJECT_KEY=rme_basic_sample_project.rvt
+  - FORGE_OBJECT_KEY=rac_basic_sample_project.rvt
+  - FORGE_OBJECT_KEY=rst_basic_sample_project.rvt
+  - FORGE_OBJECT_KEY=rme_basic_sample_project.rvt
 
 install:
-  - pip install --user awscli
-  - yarn install
+- pip install --user awscli
+- yarn install
 
 notifications:
-  slack: $SLACK_ACCOUNT:$SLACK_TOKEN
+  slack:
+    secure: TsfSsLC7ilcfSKWhEYLn7THqVOy2VJYQo4IGmSokWsONurS0PKuwqyE8NyP8YIL8GPLQDROG+i5TbMPowavKDB+5t+km68ZnGdGLMhOQQVc7fmMI3Ex6tqb+5qtR818Yu9Ugbowmwxfb0Rx5wCDjjGjONP3lDnf3h/iy1bxpvbmQODk9Y2+JWxy5putTqFoXs/2csuI0L0L8YpDwpMdMxqBKJXWzMmlqMDWgjdncAk4WIVHB4w/Dg1fJM7tjZaIr9KTVjLncTIsd8iC+lnZ3fqVo5B/z5hTeiZGbEjqTFNu/9gczyGUnpY0SQD1RJPVBlA96so6wpVFk7csZRvWHDTx7a9s1M6W6DwoYD2xsrfJKts2KvnsVUnLva1cXI9ouUPUoGfZcF7qd4YIR/doJJYKGSBDfxGQqDZX8RbFdcsZMhho6TGlxKphMO9dkEB0tpYtfOxVGIT9XbjUqnyelXqZgvdiEjfEXfjko1jgF9zarYnme6U1PchDsHVg343qAVapTP7SlB5T6hs/o6VcU7bdFCN56iWVA3otqE+yK7SwVvN1x35sKZXOsGKapEhlDAUl9E1qnV4gy/1nQC/mFEHDzvTmbCOhfIet2PuxPGAkuAkJcxggrn2SjqtoMn69KAMf55TXkFZir0wMRTTpcWNoq9wFt8C3bJ0lPq0BbcYs=
 
 script: node tests/model-derivative/basic.js $FORGE_BUCKET_KEY $FORGE_OBJECT_KEY
