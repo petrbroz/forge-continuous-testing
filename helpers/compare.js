@@ -3,6 +3,8 @@ const zlib = require('zlib');
 const fse = require('fs-extra');
 const { SvfReader } = require('forge-convert-utils');
 const { diffString } = require('json-diff');
+const jimp = require('jimp');
+const pixelmatch = require('pixelmatch');
 
 /**
  * Recursively compares two local folders, their structure, and file sizes.
@@ -61,6 +63,46 @@ function compareObjects(baselineObj, currentObj) {
     const result = diffString(baselineObj, currentObj);
     if (result) {
         throw new Error('Compared objects not equal:\n' + result);
+    }
+}
+
+/**
+ * Compares two images on local filesystem (supported formats: jpeg, png, bmp, tiff, gif).
+ * @param {string} baselineImgPath Filepath of 1st compared image.
+ * @param {string} currentImgPath Filepath of 2nd compared image.
+ * @param {number} [threshold=0.1] Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0.1 by default.
+ * @throws exception describing differences if there are any.
+ */
+async function compareImages(baselineImgPath, currentImgPath, threshold = 0.1) {
+    const baselineImg = await jimp.read(baselineImgPath);
+    const currentImg = await jimp.read(currentImgPath);
+    if (baselineImg.getWidth() !== currentImg.getWidth() || baselineImg.getHeight() !== currentImg.getHeight()) {
+        throw new Error(`Compared images (${baselineImgPath}) have different dimensions.`);
+    }
+    const width = baselineImg.getWidth();
+    const height = baselineImg.getHeight();
+    const baselineImgData = baselineImg.bitmap.data;
+    const currentImgData = currentImg.bitmap.data;
+    const mismatchedPixels = pixelmatch(baselineImgData, currentImgData, null, width, height, { threshold });
+    if (mismatchedPixels > 0) {
+        throw new Error(`Compared images (${baselineImgPath}) differ in ${mismatchedPixels} pixels.`);
+    }
+}
+
+/**
+ * Compares SVF textures (supported formats: jpeg, png, bmp, tiff, gif).
+ * @param {SvfReader} baselineSvfReader Reader of 1st compared SVF file.
+ * @param {string} baselineDir Base folder path for assets of 1st compared SVF.
+ * @param {SvfReader} currentSvfReader Reader of 2nd compared SVF file.
+ * @param {string} currentDir Base folder path for assets of 2nd compared SVF.
+ * @throws exception describing differences if there are any.
+ */
+async function compareTextures(baselineSvfReader, baselineDir, currentSvfReader, currentDir, threshold = 0.1) {
+    const baselineImgUris = baselineSvfReader.listImages();
+    const currentImgUris = currentSvfReader.listImages();
+    compareObjects(baselineImgUris, currentImgUris);
+    for (const imgUri of baselineImgUris) {
+        await compareImages(path.join(baselineDir, imgUri), path.join(currentDir, imgUri), threshold);
     }
 }
 
@@ -157,6 +199,8 @@ async function compareGeometryMetadata(baselineSvfReader, currentSvfReader) {
 module.exports = {
     compareFolders,
     compareObjects,
+    compareImages,
+    compareTextures,
     compareProperties,
     compareFragments,
     compareMaterials,

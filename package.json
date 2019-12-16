@@ -19,6 +19,8 @@
     "forge-convert-utils": "^1.1.2",
     "forge-server-utils": "^8.0.8",
     "fs-extra": "^8.1.0",
-    "json-diff": "^0.5.4"
+    "jimp": "^0.9.3",
+    "json-diff": "^0.5.4",
+    "pixelmatch": "^5.1.0"
   }
 }

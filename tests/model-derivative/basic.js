@@ -17,6 +17,7 @@ const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
 const {
     compareFolders,
     compareObjects,
+    compareTextures,
     compareProperties,
     compareFragments,
     compareMaterials,
@@ -25,6 +26,7 @@ const {
 
 const config = require('../../config');
 
+const ImageDiffThreshold = 0.1;
 const ForgeCredentials = { client_id: config.forge.client_id, client_secret: config.forge.client_secret };
 const dataManagementClient = new DataManagementClient(ForgeCredentials);
 const modelDerivativeClient = new ModelDerivativeClient(ForgeCredentials);
@@ -106,16 +108,18 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
         // Compare individual derivatives
         for (const derivative of extractResults.derivatives) {
             debug(`Comparing derivative ${derivative.guid}`);
-            const baselineSvfPath = path.join(baselineDir, derivative.basePath, 'output.svf');
-            const currentSvfPath = path.join(currentDir, derivative.basePath, 'output.svf');
-            const baselineSvfReader = await SvfReader.FromFileSystem(baselineSvfPath);
-            const currentSvfReader = await SvfReader.FromFileSystem(currentSvfPath);
+            const baselineSvfPath = path.join(baselineDir, derivative.basePath);
+            const currentSvfPath = path.join(currentDir, derivative.basePath);
+            const baselineSvfReader = await SvfReader.FromFileSystem(path.join(baselineSvfPath, 'output.svf'));
+            const currentSvfReader = await SvfReader.FromFileSystem(path.join(currentSvfPath, 'output.svf'));
             debug('Comparing SVF fragments');
             await compareFragments(baselineSvfReader, currentSvfReader);
             debug('Comparing SVF materials');
             await compareMaterials(baselineSvfReader, currentSvfReader);
             debug('Comparing SVF geometry metadata');
             await compareGeometryMetadata(baselineSvfReader, currentSvfReader);
+            debug('Comparing SVF textures');
+            await compareTextures(baselineSvfReader, baselineSvfPath, currentSvfReader, currentSvfPath, ImageDiffThreshold);
         }
     }
 }
