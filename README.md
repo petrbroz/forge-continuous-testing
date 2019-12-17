@@ -6,8 +6,9 @@
 |-------------|--------|
 | master      | [![Build Status](https://travis-ci.org/petrbroz/forge-continuous-testing.svg?branch=master)](https://travis-ci.org/petrbroz/forge-continuous-testing) |
 | tests/rvt   | [![Build Status](https://travis-ci.org/petrbroz/forge-continuous-testing.svg?branch=tests%2Frvt)](https://travis-ci.org/petrbroz/forge-continuous-testing) |
-| tests/iam   | [![Build Status](https://travis-ci.org/petrbroz/forge-continuous-testing.svg?branch=tests%2Fiam)](https://travis-ci.org/petrbroz/forge-continuous-testing)
+| tests/iam   | [![Build Status](https://travis-ci.org/petrbroz/forge-continuous-testing.svg?branch=tests%2Fiam)](https://travis-ci.org/petrbroz/forge-continuous-testing) |
 | tests/dwfx  | [![Build Status](https://travis-ci.org/petrbroz/forge-continuous-testing.svg?branch=tests%2Fdwfx)](https://travis-ci.org/petrbroz/forge-continuous-testing) |
+| tests/nwd   | [![Build Status](https://travis-ci.org/petrbroz/forge-continuous-testing.svg?branch=tests%2Fnwd)](https://travis-ci.org/petrbroz/forge-continuous-testing) |
 
 ## Tips
 
