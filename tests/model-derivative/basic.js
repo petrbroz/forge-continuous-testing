@@ -10,7 +10,10 @@
 
 const path = require('path');
 const fse = require('fs-extra');
-const debug = require('debug')('test:debug');
+const debug = require('debug');
+const log = debug('test:log');
+log.log = console.log.bind(console);
+const error = debug('test:error');
 const { DataManagementClient, ModelDerivativeClient, ManifestHelper, urnify } = require('forge-server-utils');
 const { SvfReader } = require('forge-convert-utils');
 const { downloadBaseline, uploadBaseline } = require('../../helpers/baseline');
@@ -47,20 +50,20 @@ async function extract(bucketKey, objectKey, outputDir) {
 
     fse.ensureDirSync(outputDir);
     // Getting object details
-    debug(`Retrieving object details`);
+    log(`Retrieving object details`);
     const object = await dataManagementClient.getObjectDetails(bucketKey, objectKey);
     const urn = results.urn = urnify(object.objectId);
     const urnDir = path.join(outputDir, urn);
     fse.ensureDirSync(urnDir);
     // Download derivative manifest
-    debug(`Extracting manifest`);
+    log(`Extracting manifest`);
     const manifest = results.manifest = await modelDerivativeClient.getManifest(urn);
     fse.writeJsonSync(path.join(urnDir, 'manifest.json'), manifest);
     // Download all SVFs
     const helper = new ManifestHelper(manifest);
     const graphicsDerivatives = helper.search({ type: 'resource', role: 'graphics' });
     for (const derivative of graphicsDerivatives.filter(derivative => derivative.mime === 'application/autodesk-svf')) {
-        debug(`Extracting viewable ${derivative.guid}`);
+        log(`Extracting viewable ${derivative.guid}`);
         const viewableDir = path.join(urnDir, derivative.guid);
         fse.ensureDirSync(viewableDir);
         const svf = await modelDerivativeClient.getDerivative(urn, derivative.urn);
@@ -74,13 +77,13 @@ async function extract(bucketKey, objectKey, outputDir) {
         });
         for (const asset of manifest.assets) {
             if (!asset.URI.startsWith('embed:')) {
-                debug(`Extracting asset ${asset.id}`);
+                log(`Extracting asset ${asset.id}`);
                 const assetData = await reader.getAsset(asset.URI);
                 const assetPath = path.join(viewableDir, asset.URI);
                 fse.ensureDirSync(path.dirname(assetPath));
                 fse.writeFileSync(assetPath, assetData);
             } else {
-                debug(`Skipping embedded asset ${asset.id}`);
+                log(`Skipping embedded asset ${asset.id}`);
             }
         }
     }
@@ -98,10 +101,10 @@ async function extract(bucketKey, objectKey, outputDir) {
  * @param {object} extractResults Additional data generated when extracting new derivatives.
  */
 async function compare(baselineDir, currentDir, bucketKey, objectKey, extractResults) {
-    debug('Comparing extracted folders and files');
+    log('Comparing extracted folders and files');
     compareFolders(baselineDir, currentDir);
 
-    debug('Comparing model derivative manifests');
+    log('Comparing model derivative manifests');
     const object = await dataManagementClient.getObjectDetails(bucketKey, objectKey);
     const urn = urnify(object.objectId);
     const baselineManifest = fse.readJsonSync(path.join(baselineDir, urn, 'manifest.json'));
@@ -113,7 +116,7 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
         const firstDerivative = extractResults.derivatives[0];
         const pdbAsset = firstDerivative.svf.assets.find(asset => asset.type === 'Autodesk.CloudPlatform.PropertyAttributes');
         if (pdbAsset) {
-            debug('Comparing property database assets');
+            log('Comparing property database assets');
             const baselinePropsDir = path.join(baselineDir, firstDerivative.basePath, path.dirname(pdbAsset.URI));
             const currentPropsDir = path.join(currentDir, firstDerivative.basePath, path.dirname(pdbAsset.URI));
             compareProperties(baselinePropsDir, currentPropsDir);
@@ -123,18 +126,18 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
 
         // Compare individual derivatives
         for (const derivative of extractResults.derivatives) {
-            debug(`Comparing derivative ${derivative.guid}`);
+            log(`Comparing derivative ${derivative.guid}`);
             const baselineSvfPath = path.join(baselineDir, derivative.basePath);
             const currentSvfPath = path.join(currentDir, derivative.basePath);
             const baselineSvfReader = await SvfReader.FromFileSystem(path.join(baselineSvfPath, 'output.svf'));
             const currentSvfReader = await SvfReader.FromFileSystem(path.join(currentSvfPath, 'output.svf'));
-            debug('Comparing SVF fragments');
+            log('Comparing SVF fragments');
             await compareFragments(baselineSvfReader, currentSvfReader);
-            debug('Comparing SVF materials');
+            log('Comparing SVF materials');
             await compareMaterials(baselineSvfReader, currentSvfReader);
-            debug('Comparing SVF geometry metadata');
+            log('Comparing SVF geometry metadata');
             await compareGeometryMetadata(baselineSvfReader, currentSvfReader);
-            debug('Comparing SVF textures');
+            log('Comparing SVF textures');
             await compareTextures(baselineSvfReader, baselineSvfPath, currentSvfReader, currentSvfPath, ImageDiffThreshold);
         }
     }
@@ -147,31 +150,31 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
  * @param {string} objectKey Object key of the tested model in Forge Model Derivative service.
  */
 async function test(bucketKey, objectKey) {
-    debug('Testing %s/%s', bucketKey, objectKey);
+    log('Testing %s/%s', bucketKey, objectKey);
     try {
         const testName = 'model-derivative/basic/' + bucketKey + '/' + objectKey;
         const currentDir = path.join(process.cwd(), testName, 'current');
         const baselineDir = path.join(process.cwd(), testName, 'baseline');
-        debug('Extracting derivatives');
+        log('Extracting derivatives');
         const extractResults = await extract(bucketKey, objectKey, currentDir);
-        debug('Downloading baseline');
+        log('Downloading baseline');
         await downloadBaseline(testName, baselineDir);
-        debug('Comparing derivatives against baseline');
+        log('Comparing derivatives against baseline');
         await compare(baselineDir, currentDir, bucketKey, objectKey, extractResults);
-        debug('Done!');
+        log('Done!');
     } catch (err) {
-        debug('Test failed:');
+        error('Test failed:');
         if (err.isAxiosError) {
             if (err.response) {
                 const { data, status, headers } = err.response;
-                debug('Response status: %d', status);
-                debug('Response headers:\n%O', headers);
-                debug('Response data:\n%O', data);
+                error('Response status: %d', status);
+                error('Response headers:\n%O', headers);
+                error('Response data:\n%O', data);
             } else {
-                debug('%O', err);
+                error('%O', err);
             }
         } else {
-            debug('%O', err);
+            error('%O', err);
         }
         process.exit(1);
     }
@@ -184,28 +187,28 @@ async function test(bucketKey, objectKey) {
  * @param {string} objectKey Object key of the tested model in Forge Model Derivative service.
  */
 async function update(bucketKey, objectKey) {
-    debug('Updating baseline for %s/%s', bucketKey, objectKey);
+    log('Updating baseline for %s/%s', bucketKey, objectKey);
     try {
         const testName = 'model-derivative/basic/' + bucketKey + '/' + objectKey;
         const currentDir = path.join(process.cwd(), testName, 'current');
-        debug('Extracting derivatives');
+        log('Extracting derivatives');
         await extract(bucketKey, objectKey, currentDir);
-        debug('Uploading baseline');
+        log('Uploading baseline');
         await uploadBaseline(testName, currentDir);
-        debug('Done!');
+        log('Done!');
     } catch (err) {
-        debug('Baseline update failed:');
+        error('Baseline update failed:');
         if (err.isAxiosError) {
             if (err.response) {
                 const { data, status, headers } = err.response;
-                debug('Response status: %d', status);
-                debug('Response headers:\n%O', headers);
-                debug('Response data:\n%O', data);
+                error('Response status: %d', status);
+                error('Response headers:\n%O', headers);
+                error('Response data:\n%O', data);
             } else {
-                debug('Request:\n%O', err.request);
+                error('Request:\n%O', err.request);
             }
         } else {
-            debug('%O', err);
+            error('%O', err);
         }
         process.exit(1);
     }
