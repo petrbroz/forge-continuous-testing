@@ -31,6 +31,13 @@ const ForgeCredentials = { client_id: config.forge.client_id, client_secret: con
 const dataManagementClient = new DataManagementClient(ForgeCredentials);
 const modelDerivativeClient = new ModelDerivativeClient(ForgeCredentials);
 
+/**
+ * Extracts new derivatives for a specific model and stores them in a local folder.
+ * @async
+ * @param {string} bucketKey Bucket key of the model in Forge Model Derivative service.
+ * @param {string} objectKey Object key of the model in Forge Model Derivative service.
+ * @param {string} outputDir Output directory for the extracted derivatives.
+ */
 async function extract(bucketKey, objectKey, outputDir) {
     let results = {
         urn: null,
@@ -81,6 +88,15 @@ async function extract(bucketKey, objectKey, outputDir) {
     return results;
 }
 
+/**
+ * Compares two local folders containing current and baseline derivatives extracted from a specific model.
+ * @async
+ * @param {string} baselineDir Directory where the baseline derivative content is located.
+ * @param {string} currentDir Directory where the current derivative content is located.
+ * @param {string} bucketKey Bucket key of the tested model in Forge Model Derivative service.
+ * @param {string} objectKey Object key of the tested model in Forge Model Derivative service.
+ * @param {object} extractResults Additional data generated when extracting new derivatives.
+ */
 async function compare(baselineDir, currentDir, bucketKey, objectKey, extractResults) {
     debug('Comparing extracted folders and files');
     compareFolders(baselineDir, currentDir);
@@ -124,25 +140,61 @@ async function compare(baselineDir, currentDir, bucketKey, objectKey, extractRes
     }
 }
 
-async function run(bucketKey, objectKey, updateBaseline) {
+/**
+ * Compares derivative content of a specific model with a previously stored baseline.
+ * @async
+ * @param {string} bucketKey Bucket key of the tested model in Forge Model Derivative service.
+ * @param {string} objectKey Object key of the tested model in Forge Model Derivative service.
+ */
+async function test(bucketKey, objectKey) {
+    debug('Testing %s/%s', bucketKey, objectKey);
+    try {
+        const testName = 'model-derivative/basic/' + bucketKey + '/' + objectKey;
+        const currentDir = path.join(process.cwd(), testName, 'current');
+        const baselineDir = path.join(process.cwd(), testName, 'baseline');
+        debug('Extracting derivatives');
+        const extractResults = await extract(bucketKey, objectKey, currentDir);
+        debug('Downloading baseline');
+        await downloadBaseline(testName, baselineDir);
+        debug('Comparing derivatives against baseline');
+        await compare(baselineDir, currentDir, bucketKey, objectKey, extractResults);
+        debug('Done!');
+    } catch (err) {
+        debug('Test failed:');
+        if (err.isAxiosError) {
+            if (err.response) {
+                const { data, status, headers } = err.response;
+                debug('Response status: %d', status);
+                debug('Response headers:\n%O', headers);
+                debug('Response data:\n%O', data);
+            } else {
+                debug('%O', err);
+            }
+        } else {
+            debug('%O', err);
+        }
+        process.exit(1);
+    }
+}
+
+/**
+ * Uploads derivative content of a specific model as a new baseline.
+ * @async
+ * @param {string} bucketKey Bucket key of the tested model in Forge Model Derivative service.
+ * @param {string} objectKey Object key of the tested model in Forge Model Derivative service.
+ */
+async function update(bucketKey, objectKey) {
+    debug('Updating baseline for %s/%s', bucketKey, objectKey);
     try {
         const testName = 'model-derivative/basic/' + bucketKey + '/' + objectKey;
         const currentDir = path.join(process.cwd(), testName, 'current');
         debug('Extracting derivatives');
-        const extractResults = await extract(bucketKey, objectKey, currentDir);
-        if (updateBaseline) {
-            debug('Updating baseline');
-            await uploadBaseline(testName, currentDir);
-        } else {
-            const baselineDir = path.join(process.cwd(), testName, 'baseline');
-            debug('Downloading baseline');
-            await downloadBaseline(testName, baselineDir);
-            debug('Comparing derivatives against baseline');
-            await compare(baselineDir, currentDir, bucketKey, objectKey, extractResults);
-        }
+        await extract(bucketKey, objectKey, currentDir);
+        debug('Uploading baseline');
+        await uploadBaseline(testName, currentDir);
         debug('Done!');
     } catch (err) {
-        debug('Test failed:');
+        debug('Baseline update failed:');
         if (err.isAxiosError) {
             if (err.response) {
                 const { data, status, headers } = err.response;
@@ -159,5 +211,8 @@ async function run(bucketKey, objectKey, updateBaseline) {
     }
 }
 
-const updateBaseline = process.argv.indexOf('--update') !== -1;
-run(process.argv[2], process.argv[3], updateBaseline);
+if (process.argv.indexOf('--update') !== -1) {
+    update(process.argv[2], process.argv[3]);
+} else {
+    test(process.argv[2], process.argv[3]);
+}
