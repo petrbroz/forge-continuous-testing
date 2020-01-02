@@ -142,7 +142,19 @@ async function run(bucketKey, objectKey, updateBaseline) {
         }
         debug('Done!');
     } catch (err) {
-        debug(err.isAxiosError ? err.response.data : err);
+        debug('Test failed:');
+        if (err.isAxiosError) {
+            if (err.response) {
+                const { data, status, headers } = err.response;
+                debug('Response status: %d', status);
+                debug('Response headers:\n%O', headers);
+                debug('Response data:\n%O', data);
+            } else {
+                debug('Request:\n%O', err.request);
+            }
+        } else {
+            debug('%O', err);
+        }
         process.exit(1);
     }
 }
